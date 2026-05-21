@@ -275,3 +275,126 @@ async def model_info() -> ModelInfoResponse:
         features=_feature_names if _feature_names else list(feature_ranges.keys()),
         feature_ranges=feature_ranges,
     )
+
+
+# ---------------------------------------------------------------------------
+# Endpoints de données — alimentent le dashboard React
+# ---------------------------------------------------------------------------
+
+DATA_PATH = PROJECT_ROOT / "data" / "predictive_maintenance_v3.csv"
+
+
+@app.get("/data/overview", summary="Statistiques globales de la flotte")
+async def data_overview():
+    df = pd.read_csv(DATA_PATH)
+    by_type = {}
+    for mt, g in df.groupby("machine_type"):
+        by_type[mt] = {
+            "failure_rate": round(float(g["failure_within_24h"].mean()), 4),
+            "count": int(len(g)),
+            "avg_rul": round(float(g["rul_hours"].mean()), 1),
+            "machine_count": int(g["machine_id"].nunique()),
+        }
+    return {
+        "total_records": int(len(df)),
+        "failure_rate": round(float(df["failure_within_24h"].mean()), 4),
+        "machine_types": int(df["machine_type"].nunique()),
+        "total_machines": int(df["machine_id"].nunique()),
+        "avg_rul": round(float(df["rul_hours"].mean()), 1),
+        "failures_count": int(df["failure_within_24h"].sum()),
+        "by_machine_type": by_type,
+    }
+
+
+@app.get("/models/metrics", summary="Métriques de comparaison des modèles")
+async def models_metrics():
+    df = pd.read_csv(MODELS_DIR / "comparison_report.csv")
+    df.columns = [c.replace(" ↑", "").strip() for c in df.columns]
+    records = []
+    best_name = _model_name if _model_name != "Non chargé" else "XGBoost"
+    for _, row in df.iterrows():
+        records.append({
+            "name": str(row["Modèle"]),
+            "accuracy": round(float(row["Accuracy"]), 4),
+            "precision": round(float(row["Precision"]), 4),
+            "recall": round(float(row["Recall"]), 4),
+            "f1": round(float(row["F1-Score"]), 4),
+            "roc_auc": round(float(row["ROC-AUC"]), 4),
+            "pr_auc": round(float(row["PR-AUC"]), 4),
+            "threshold": round(float(row["Seuil"]), 4),
+            "train_time": round(float(row["Temps (s)"]), 1),
+            "best": str(row["Modèle"]) == best_name,
+        })
+    return {"models": records}
+
+
+@app.get("/models/shap", summary="Importance globale des features (SHAP)")
+async def models_shap():
+    df = pd.read_csv(MODELS_DIR / "shap_feature_importance.csv")
+    return {"features": df.rename(columns={"mean_abs_shap": "value"}).to_dict(orient="records")}
+
+
+@app.get("/models/curves", summary="Courbes ROC et PR depuis eval_artifacts")
+async def models_curves():
+    from sklearn.metrics import roc_curve, precision_recall_curve
+
+    arts_path = MODELS_DIR / "eval_artifacts.pkl"
+    if not arts_path.exists():
+        raise HTTPException(status_code=404, detail="eval_artifacts.pkl introuvable — lancez python train.py")
+    arts = joblib.load(arts_path)
+    y_test = arts["y_test"]
+    result = {}
+    for name, a in arts.items():
+        if name == "y_test":
+            continue
+        fpr, tpr, _ = roc_curve(y_test, a["y_proba"])
+        prec, rec, _ = precision_recall_curve(y_test, a["y_proba"])
+        step_r = max(1, len(fpr) // 80)
+        step_p = max(1, len(rec) // 80)
+        result[name] = {
+            "roc": {
+                "fpr": [round(float(x), 4) for x in fpr[::step_r]] + [1.0],
+                "tpr": [round(float(x), 4) for x in tpr[::step_r]] + [1.0],
+            },
+            "pr": {
+                "recall": [round(float(x), 4) for x in rec[::step_p]],
+                "precision": [round(float(x), 4) for x in prec[::step_p]],
+            },
+        }
+    return result
+
+
+@app.get("/models/confusion", summary="Matrices de confusion depuis eval_artifacts")
+async def models_confusion_endpoint():
+    from sklearn.metrics import confusion_matrix
+
+    arts_path = MODELS_DIR / "eval_artifacts.pkl"
+    if not arts_path.exists():
+        raise HTTPException(status_code=404, detail="eval_artifacts.pkl introuvable — lancez python train.py")
+    arts = joblib.load(arts_path)
+    y_test = arts["y_test"]
+    result = {}
+    for name, a in arts.items():
+        if name == "y_test":
+            continue
+        cm = confusion_matrix(y_test, a["y_pred"])
+        result[name] = cm.tolist()
+    return result
+
+
+@app.get("/models/shap/bar-image", summary="Image SHAP bar plot (PNG)")
+async def shap_bar_image():
+    from fastapi.responses import FileResponse
+    path = MODELS_DIR / "shap_bar.png"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="shap_bar.png introuvable")
+    return FileResponse(path, media_type="image/png")
+
+
+@app.get("/models/shap/summary-image", summary="Image SHAP summary plot (PNG)")
+async def shap_summary_image():
+    from fastapi.responses import FileResponse
+    path = MODELS_DIR / "shap_summary.png"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="shap_summary.png introuvable")
+    return FileResponse(path, media_type="image/png")

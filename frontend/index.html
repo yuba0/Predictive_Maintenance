@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1440" />
+<title>PredictMaint — Predictive Maintenance Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-0:#070F1F;
+    --bg-1:#0A1628;
+    --bg-2:#0F1D33;
+    --bg-3:#152847;
+    --bg-4:#1B345A;
+    --line:#1E3458;
+    --line-soft:#172A48;
+    --text-0:#E8F0FF;
+    --text-1:#B7C5DD;
+    --text-2:#7F8FAD;
+    --text-3:#566584;
+    --blue:#3B82F6;
+    --cyan:#00B4D8;
+    --green:#06D6A0;
+    --amber:#F59E0B;
+    --red:#EF4444;
+    --crit:#7B0000;
+    --violet:#8B5CF6;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg-0);color:var(--text-0);font-family:'Inter','Space Grotesk',system-ui,sans-serif;font-feature-settings:"ss01","cv11";-webkit-font-smoothing:antialiased}
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(1200px 600px at 75% -10%, rgba(59,130,246,.10), transparent 60%),
+      radial-gradient(900px 500px at -10% 30%, rgba(0,180,216,.06), transparent 60%),
+      var(--bg-0);
+  }
+  /* Hex/circuit texture overlay */
+  body::before{
+    content:"";
+    position:fixed;inset:0;
+    pointer-events:none;
+    background-image:
+      linear-gradient(rgba(59,130,246,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59,130,246,.04) 1px, transparent 1px);
+    background-size: 48px 48px, 48px 48px;
+    mask-image: radial-gradient(circle at 50% 30%, black 0%, transparent 80%);
+    z-index:0;
+  }
+  .mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-feature-settings:"zero","cv01"}
+  .grotesk{font-family:'Space Grotesk',Inter,sans-serif;letter-spacing:-.01em}
+  ::selection{background:rgba(59,130,246,.4)}
+  /* scrollbars */
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:rgba(59,130,246,.18);border-radius:10px}
+  ::-webkit-scrollbar-thumb:hover{background:rgba(59,130,246,.3)}
+
+  /* glass card */
+  .glass{
+    background:linear-gradient(180deg, rgba(21,40,71,.55) 0%, rgba(10,22,40,.55) 100%);
+    border:1px solid rgba(59,130,246,.14);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    border-radius:16px;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.04) inset,
+      0 0 0 1px rgba(59,130,246,.04),
+      0 20px 40px -20px rgba(0,0,0,.6);
+  }
+  .glass-strong{
+    background:linear-gradient(180deg, rgba(27,52,90,.65) 0%, rgba(15,29,51,.65) 100%);
+    border:1px solid rgba(59,130,246,.22);
+    backdrop-filter: blur(18px) saturate(160%);
+    border-radius:18px;
+  }
+  .ring-glow{ box-shadow: 0 0 0 1px rgba(59,130,246,.25), 0 0 40px -8px rgba(59,130,246,.35) }
+  .glow-blue{ box-shadow: 0 0 30px -4px rgba(59,130,246,.5), inset 0 0 0 1px rgba(59,130,246,.35) }
+  .glow-cyan{ box-shadow: 0 0 30px -4px rgba(0,180,216,.5), inset 0 0 0 1px rgba(0,180,216,.35) }
+  .glow-green{ box-shadow: 0 0 30px -4px rgba(6,214,160,.5), inset 0 0 0 1px rgba(6,214,160,.35) }
+  .glow-amber{ box-shadow: 0 0 30px -4px rgba(245,158,11,.5), inset 0 0 0 1px rgba(245,158,11,.35) }
+  .glow-red  { box-shadow: 0 0 30px -4px rgba(239,68,68,.55), inset 0 0 0 1px rgba(239,68,68,.4) }
+
+  /* pulsing dot */
+  @keyframes pulse-dot {
+    0%{ box-shadow: 0 0 0 0 currentColor }
+    70%{ box-shadow: 0 0 0 10px transparent }
+    100%{ box-shadow: 0 0 0 0 transparent }
+  }
+  .pulse{ animation: pulse-dot 1.8s infinite; border-radius:999px }
+
+  @keyframes shimmer {
+    0%{ background-position: -200% 0 }
+    100%{ background-position: 200% 0 }
+  }
+  .shimmer{
+    background: linear-gradient(90deg, transparent, rgba(59,130,246,.15), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 3s linear infinite;
+  }
+
+  @keyframes drift {
+    0%{transform:translateY(0)}
+    50%{transform:translateY(-3px)}
+    100%{transform:translateY(0)}
+  }
+  .float{ animation: drift 4s ease-in-out infinite }
+
+  /* number counter */
+  .tabular{font-variant-numeric: tabular-nums}
+
+  /* keyboard focus */
+  button:focus-visible, [role=button]:focus-visible{ outline: 2px solid rgba(59,130,246,.6); outline-offset:2px; border-radius:8px }
+
+  /* utility */
+  .hairline{ background:linear-gradient(90deg, transparent, rgba(59,130,246,.4), transparent); height:1px; width:100% }
+
+  /* spinner-like rotating */
+  @keyframes spin-slow { to { transform: rotate(360deg) } }
+  .spin-slow{ animation: spin-slow 18s linear infinite }
+
+  /* fade up on mount */
+  @keyframes fadeUp { from { opacity:0; transform: translateY(8px) } to { opacity:1; transform: none } }
+  .fade-up{ animation: fadeUp .5s ease-out both }
+
+  /* intro loading bar */
+  @keyframes introBar { from { width:0 } to { width:100% } }
+
+  /* fix root layout */
+  #root{position:relative;z-index:1}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/three@0.157.0/build/three.min.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="src/icons.jsx?v=2"></script>
+<script type="text/babel" src="src/charts.jsx?v=2"></script>
+<script type="text/babel" src="src/components.jsx?v=3"></script>
+<script type="text/babel" src="src/page-overview.jsx?v=2"></script>
+<script type="text/babel" src="src/page-simulator.jsx?v=2"></script>
+<script type="text/babel" src="src/page-models.jsx?v=2"></script>
+<script type="text/babel" src="src/page-shap.jsx?v=2"></script>
+<script type="text/babel" src="src/intro.jsx?v=1"></script>
+<script type="text/babel" src="src/app.jsx?v=2"></script>
+</body>
+</html>

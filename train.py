@@ -112,6 +112,7 @@ def step_train_models(
     trained_models = {}
     results = {}
     thresholds = {}
+    eval_artifacts = {"y_test": np.array(y_test)}
 
     model_configs = {
         "lr":  ("Logistic Regression", baseline),
@@ -147,6 +148,10 @@ def step_train_models(
         thresholds[name] = optimal_threshold
         print(f"  Seuil optimal ({threshold_metric}) : {optimal_threshold}")
 
+        # Sauvegarde des probabilités pour les courbes ROC/PR du dashboard
+        y_pred_eval = (y_proba >= optimal_threshold).astype(int)
+        eval_artifacts[name] = {"y_pred": y_pred_eval, "y_proba": y_proba}
+
         # Évaluation avec le seuil optimal
         metrics = module.evaluate(model, X_test, y_test, threshold=optimal_threshold)
         metrics["train_time"] = train_time
@@ -158,6 +163,9 @@ def step_train_models(
         # Sauvegarde individuelle
         module.save_model(model)
         trained_models[name] = model
+
+    joblib.dump(eval_artifacts, MODELS_DIR / "eval_artifacts.pkl")
+    print(f"  Artefacts d'évaluation sauvegardés : models/eval_artifacts.pkl")
 
     return trained_models, results, thresholds
 

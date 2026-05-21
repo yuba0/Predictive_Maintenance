@@ -1,0 +1,11 @@
+feature,mean_abs_shap
+rpm,1.6636348
+temperature_motor,1.5559204
+vibration_rms,0.93183804
+current_phase_avg,0.81326497
+hours_since_maintenance,0.69640595
+pressure_level,0.4916814
+operating_mode_idle,0.32250473
+machine_type_Compressor,0.15651034
+operating_mode_peak,0.11848757
+machine_type_Pump,0.11175719
